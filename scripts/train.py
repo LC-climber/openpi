@@ -29,9 +29,19 @@ import openpi.training.weight_loaders as _weight_loaders
 
 
 def init_logging():
-    """Custom logging format for better readability."""
+    """
+    Custom logging format for better readability.
+    解释：定义了一个字典，用来建立“全称”到“缩写”的映射关系。
+    目的：为了节省屏幕空间，把 INFO 变成 I，ERROR 变成 E，这样日志的“前缀”长度固定，看着更整齐。
+    """
     level_mapping = {"DEBUG": "D", "INFO": "I", "WARNING": "W", "ERROR": "E", "CRITICAL": "C"}
 
+    """
+    解释：定义了一个继承自 logging.Formatter 的新类。
+    format 方法：这是核心逻辑。每当有一条日志要打印时：
+    它拦截这条日志记录（record）。record.levelname = ...：查找上面的 level_mapping 字典，把当前的日志级别名字（如 "INFO"）替换成缩写（"I"）。如果没找到，就保持原样。
+    super().format(record)：调用父类的标准格式化方法，继续完成后续的打印工作。
+    """
     class CustomFormatter(logging.Formatter):
         def format(self, record):
             record.levelname = level_mapping.get(record.levelname, record.levelname)
