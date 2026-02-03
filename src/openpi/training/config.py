@@ -463,6 +463,52 @@ class LeRobotDROIDDataConfig(DataConfigFactory):
 
 
 @dataclasses.dataclass(frozen=True)
+class LeRobotExcavatorDataConfig(DataConfigFactory):
+    """
+    DataConfig for Excavator joint-state -> joint-action prediction.
+
+    This config is specifically designed for the excavator dataset where:
+    - State: [boom, arm, bucket, swing] joint angles (4 dims)
+    - Actions: [boom, arm, bucket, swing] joint commands (4 dims)
+    - Image: Single camera observation
+    """
+
+    @override
+    def create(self, assets_dirs: pathlib.Path, model_config: _model.BaseModelConfig) -> DataConfig:
+        # 1. Repack: LeRobot parquet column names -> OpenPI unified keys
+        repack_transforms = _transforms.Group(
+            inputs=[
+                _transforms.RepackTransform(
+                    {
+                        "image": "image",       # LeRobot stores image as "image"
+                        "state": "state",       # Joint positions [boom, arm, bucket, swing]
+                        "action": "action",     # Joint actions [boom, arm, bucket, swing]
+                    }
+                )
+            ]
+        )
+
+        # 2. Data transforms: convert raw data to model input format
+        data_transforms = _transforms.Group(
+            inputs=[droid_policy.ExcavatorInputs(model_type=model_config.model_type)],
+            outputs=[droid_policy.ExcavatorOutputs()],
+        )
+
+        # 3. Model transforms: tokenization, padding, etc.
+        model_transforms = ModelTransformFactory(
+            default_prompt="predict excavator joint action from joint state"
+        )(model_config)
+
+        return dataclasses.replace(
+            self.create_base_config(assets_dirs, model_config),
+            repack_transforms=repack_transforms,
+            data_transforms=data_transforms,
+            model_transforms=model_transforms,
+            action_sequence_keys=("action",),
+        )
+
+
+@dataclasses.dataclass(frozen=True)
 class TrainConfig:
     # Name of the config. Must be unique. Will be used to reference this config.
     name: tyro.conf.Suppress[str]
@@ -964,6 +1010,53 @@ _CONFIGS = [
         overwrite=True,
         exp_name="debug_pi05",
         wandb_enabled=False,
+    ),
+    #
+    # Excavator fine-tuning configs.
+    #
+    TrainConfig(
+        name="pi05_excavator_finetune",
+        model=pi0_config.Pi0Config(
+            pi05=True,
+            action_dim=32,                      # Pi0.5 standard output dimension
+            action_horizon=10,                  # Action chunk length for stability
+            max_token_len=128,                  # Token budget for prompt + state + action
+            paligemma_variant="gemma_2b_lora",
+            action_expert_variant="gemma_300m_lora",
+            dtype="bfloat16",
+            discrete_state_input=False,         # Excavator state is continuous
+        ),
+        data=LeRobotExcavatorDataConfig(
+            repo_id="/root/gpufree-data/lerobot_examples_490_train",
+            base_config=DataConfig(
+                prompt_from_task=False,
+            ),
+        ),
+        weight_loader=weight_loaders.CheckpointWeightLoader(
+            "/root/gpufree-data/models/pi05_base/params"
+        ),
+        freeze_filter=pi0_config.Pi0Config(
+            pi05=True,
+            discrete_state_input=False,
+            paligemma_variant="gemma_2b_lora",
+            action_expert_variant="gemma_300m_lora",
+            action_dim=32,
+            action_horizon=10,
+        ).get_freeze_filter(),
+        batch_size=2,                           # Safe for 4090
+        num_train_steps=20_000,
+        ema_decay=None,                         # LoRA doesn't need EMA
+        save_interval=5_000,
+        keep_period=5_000,
+        log_interval=100,
+        wandb_enabled=True,
+        lr_schedule=_optimizer.CosineDecaySchedule(
+            warmup_steps=1_000,
+            peak_lr=5e-5,
+            decay_steps=1_000_000,
+            decay_lr=5e-5,
+        ),
+        optimizer=_optimizer.AdamW(clip_gradient_norm=1.0),
     ),
     # RoboArena & PolaRiS configs.
     *roboarena_config.get_roboarena_configs(),

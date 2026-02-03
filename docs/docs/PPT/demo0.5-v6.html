@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>π0.5 VLA Argumentative Presentation (v6)</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+        body { font-family: 'Inter', 'Noto Sans SC', sans-serif; background-color: #0f172a; color: #334155; }
+        .slide-container { aspect-ratio: 16/9; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); background: white; }
+        .fade-in { animation: fadeIn 0.6s ease-out forwards; }
+        .slide-up { animation: slideUp 0.6s ease-out forwards; opacity: 0; }
+        .slide-in-right { animation: slideInRight 0.5s ease-out forwards; opacity: 0; }
+        .pulse { animation: pulse 2s cubic-bezier(0.4,0,0.6,1) infinite; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideInRight { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+
+        // Minimal inline Icons (used in v6)
+        const Icons = {
+            Brain: ({className=''}) => (
+                <svg className={"w-8 h-8 text-purple-600 " + className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>
+            ),
+            Cpu: ({className=''}) => (<svg className={"w-8 h-8 text-amber-500 " + className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9h6v6H9z"/></svg>),
+            Layers: ({className=''}) => (<svg className={"w-6 h-6 text-indigo-500 " + className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" /></svg>),
+            Zap: ({className=''}) => (<svg className={"w-6 h-6 text-yellow-400 " + className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="13 2 3 14 12 14 11 22 21 10 13 10 13 2"/></svg>),
+            ArrowRight: ({className=''}) => (<svg className={"w-6 h-6 " + className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>),
+            MessageSquare: ({className=''}) => (<svg className={"w-6 h-6 text-blue-500 " + className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>),
+            Database: ({className=''}) => (<svg className={"w-6 h-6 text-purple-500 " + className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v6c0 1.66 4.03 3 9 3s9-1.34 9-3V5"/></svg>),
+            GitBranch: ({className=''}) => (<svg className={"w-6 h-6 text-purple-600 " + className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 3v12"/><circle cx="6" cy="3" r="2"/><path d="M18 21V9"/><circle cx="18" cy="21" r="2"/><path d="M18 7a4 4 0 0 0-4-4"/></svg>),
+            Lock: ({className=''}) => (<svg className={"w-5 h-5 text-blue-300 " + className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>),
+            Unlock: ({className=''}) => (<svg className={"w-5 h-5 text-amber-400 " + className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>)
+        };
+
+        // Card & Badge
+        const Card = ({ children, className = "" }) => (
+            <div className={`bg-white rounded-xl shadow-lg border border-slate-200 overflow-hidden ${className}`}>
+                {children}
+            </div>
+        );
+        const Badge = ({ children, color = "blue" }) => {
+            const colors = {
+                blue: "bg-blue-100 text-blue-700 border-blue-200",
+                amber: "bg-amber-100 text-amber-700 border-amber-200",
+                slate: "bg-slate-100 text-slate-700 border-slate-200",
+            };
+            return <span className={`px-2 py-0.5 rounded-md text-xs font-medium border ${colors[color] || colors.blue}`}>{children}</span>;
+        };
+
+        // App
+        const App = () => {
+            const [activeTab, setActiveTab] = useState('architecture');
+            const tabs = [
+                { id: 'architecture', label: '本质架构', icon: Icons.Layers },
+                { id: 'innovation', label: '核心创新 (解耦)', icon: Icons.GitBranch },
+                { id: 'comparison', label: '新旧对比 (vs RT-2)', icon: Icons.ArrowRight },
+            ];
+            return (
+                <div className="min-h-screen bg-slate-50 font-sans text-slate-800 p-4 md:p-8">
+                  <div className="max-w-5xl mx-auto space-y-8">
+                    <header className="text-center space-y-4">
+                      <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-slate-900">
+                        <span className="bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">π0.5</span> 模型架构解析
+                      </h1>
+                      <p className="text-lg text-slate-600 max-w-2xl mx-auto">从“暴力端到端”到“通用大脑 + 专用小脑”的进化之路</p>
+                    </header>
+
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {tabs.map((tab) => {
+                        const Icon = tab.icon;
+                        return (
+                          <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 px-6 py-3 rounded-full font-semibold transition-all duration-200 ${activeTab === tab.id ? 'bg-slate-900 text-white shadow-md transform scale-105' : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'}`}>
+                            <Icon />
+                            {tab.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <main className="transition-all duration-300">
+                      {activeTab === 'architecture' && <ArchitectureView />}
+                      {activeTab === 'innovation' && <InnovationView />}
+                      {activeTab === 'comparison' && <ComparisonView />}
+                    </main>
+
+                    <footer className="text-center text-slate-400 text-sm mt-12 border-t border-slate-200 pt-8">
+                      <p>基于 π<sub>0.5</sub> 论文架构图解析 • Designed for Research Explanation</p>
+                    </footer>
+                  </div>
+                </div>
+            );
+        };
+
+        // Views (kept largely same as original content)
+        const ArchitectureView = () => (
+          <div className="space-y-6">
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-bold">本质：π<sub>0.5</sub> = VLM + Action Expert</h2>
+              <p className="text-slate-500">一个巨大的通用大脑，挂载一个灵巧的动作小脑。</p>
+            </div>
+
+            <div className="grid md:grid-cols-12 gap-6 items-stretch">
+              <Card className="md:col-span-7 bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-100 relative group">
+                <div className="absolute top-4 right-4"><Icons.Lock /></div>
+                <div className="p-6 h-full flex flex-col">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-3 bg-blue-600 rounded-lg text-white shadow-lg"><Icons.Brain /></div>
+                    <div>
+                      <h3 className="text-xl font-bold text-slate-800">Pre-trained VLM</h3>
+                      <Badge color="blue">The Brain (大脑)</Badge>
+                      <Badge color="slate" className="ml-2">Frozen / LoRA</Badge>
+                    </div>
+                  </div>
+
+                  <div className="flex-grow space-y-4">
+                    <div className="bg-white/60 p-4 rounded-lg backdrop-blur-sm"><div className="text-sm font-semibold text-blue-900 mb-1">Vision Encoder (SigLIP 400M)</div><p className="text-xs text-slate-600">将像素转化为高维特征</p></div>
+                    <div className="bg-white/60 p-4 rounded-lg backdrop-blur-sm"><div className="text-sm font-semibold text-blue-900 mb-1">LLM (Gemma 2.6B)</div><p className="text-xs text-slate-600">负责逻辑推理、任务分解、多模态融合</p></div>
+                  </div>
+
+                  <div className="mt-6 border-t border-blue-200 pt-4">
+                    <p className="text-sm font-medium text-blue-800">输出 (通用接口):</p>
+                    <div className="flex gap-2 mt-2">
+                      <div className="flex-1 bg-white border border-blue-200 p-2 rounded text-center text-xs font-mono text-blue-700">Textual Subtask<br/><span className="text-gray-400">"pick up pillow"</span></div>
+                      <div className="flex-1 bg-white border border-blue-200 p-2 rounded text-center text-xs font-mono text-blue-700">Latent Embeddings<br/><span className="text-gray-400">[0.1, 0.5, ...]</span></div>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+
+              <div className="md:col-span-1 flex items-center justify-center py-4 md:py-0"><Icons.ArrowRight className="text-slate-300 md:rotate-0 rotate-90" /></div>
+
+              <Card className="md:col-span-4 bg-gradient-to-br from-amber-50 to-orange-50 border-amber-100 relative">
+                <div className="absolute top-4 right-4"><Icons.Unlock /></div>
+                <div className="p-6 h-full flex flex-col">
+                  <div className="flex items-center gap-3 mb-4"><div className="p-3 bg-amber-500 rounded-lg text-white shadow-lg"><Icons.Cpu /></div><div><h3 className="text-xl font-bold text-slate-800">Action Expert</h3><Badge color="amber">The Cerebellum (小脑)</Badge><Badge color="slate" className="ml-2">Trainable</Badge></div></div>
+                  <div className="flex-grow space-y-4"><div className="bg-white/60 p-4 rounded-lg backdrop-blur-sm"><div className="text-sm font-semibold text-amber-900 mb-1">Diffusion Policy / Flow</div><p className="text-xs text-slate-600">基于 VLM 的输入和噪声，生成平滑分布</p></div><div className="flex items-center justify-center p-4"><div className="text-center"><span className="text-xs text-slate-400 block mb-1">Params</span><span className="text-2xl font-bold text-slate-700">300M</span></div></div></div>
+                  <div className="mt-6 border-t border-amber-200 pt-4"><p className="text-sm font-medium text-amber-800">最终输出:</p><div className="mt-2 bg-slate-900 text-green-400 font-mono text-xs p-3 rounded">Continuous Action<br/>[0.54v, 1.23rad, ...]</div></div>
+                </div>
+              </Card>
+            </div>
+          </div>
+        );
+
+        const InnovationView = () => (
+          <div className="space-y-8">
+            <div className="bg-white rounded-xl p-8 border-l-4 border-purple-600 shadow-sm"><h2 className="text-2xl font-bold mb-4 flex items-center gap-2"><Icons.GitBranch className="text-purple-600" />最大的创新：通用的“动静分离”接口</h2><p className="text-slate-600 text-lg leading-relaxed">π<sub>0.5</sub> 设计了一个<strong>机器人无关 (Robot-Agnostic)</strong> 的接口，将 VLM 的规划能力与 Action Expert 的执行能力隔离开来。这意味着 VLM 不需要知道具体的电机参数，它只需要像人一样理解场景。</p></div>
+            <div className="grid md:grid-cols-2 gap-8"><div className="space-y-4"><div className="flex items-center gap-3 text-lg font-bold text-slate-800"><Icons.MessageSquare className="text-blue-500" />1. 显式的文本指令 (Textual Subtask)</div><Card className="p-6 bg-slate-50"><div className="mb-3"><span className="font-mono text-sm bg-slate-200 px-2 py-1 rounded">"Pick up the pillow"</span></div><ul className="space-y-2 text-sm text-slate-600"><li className="flex gap-2"><span className="text-green-500">✔</span> <strong>完全通用：</strong> 人、狗、轮式机器人的“捡枕头”目标定义一致。</li><li className="flex gap-2"><span className="text-green-500">✔</span> <strong>作用：</strong> 告诉小脑“短期目标是什么”。</li><li className="flex gap-2"><span className="text-green-500">✔</span> <strong>来源：</strong> 监督学习 (图像 &rarr; 子任务)。</li></ul></Card></div><div className="space-y-4"><div className="flex items-center gap-3 text-lg font-bold text-slate-800"><Icons.Database className="text-purple-500" />2. 隐式的语义特征 (Latent Embeddings)</div><Card className="p-6 bg-slate-50"><div className="mb-3"><div className="h-2 w-full bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 rounded-full"></div><span className="text-xs text-slate-400">High-dim Vectors</span></div><ul className="space-y-2 text-sm text-slate-600"><li className="flex gap-2"><span className="text-green-500">✔</span> <strong>感官直觉：</strong> 包含“枕头是软的”、“在左下角”等深度理解。</li><li className="flex gap-2"><span className="text-green-500">✔</span> <strong>作用：</strong> 让小脑直接利用 VLM 的视觉分析，无需从头处理像素。</li><li className="flex gap-2"><span className="text-green-500">✔</span> <strong>来源：</strong> 海量 Web 数据预训练获得的表征能力。</li></ul></Card></div></div>
+          </div>
+        );
+
+        const ComparisonView = () => (
+          <div className="space-y-8"><div className="text-center space-y-2"><h2 className="text-2xl font-bold">架构演进的灵魂对比</h2><p className="text-slate-500">RT-2 (Actions as Language) vs. π<sub>0.5</sub> (Hierarchical Control)</p></div><div className="grid md:grid-cols-2 gap-6"><Card className="border-slate-200 opacity-90"><div className="bg-slate-100 p-4 border-b border-slate-200"><h3 className="font-bold text-slate-600 flex items-center gap-2"><span className="bg-slate-500 text-white text-xs px-2 py-1 rounded">Previous</span>RT-2 (Monolithic)</h3></div><div className="p-6 space-y-6"><div className="bg-slate-800 rounded-lg p-6 text-center text-white relative overflow-hidden"><div className="absolute inset-0 bg-slate-700/50"></div><div className="relative z-10"><Icons.Brain className="mx-auto mb-2 text-slate-400" /><div className="font-mono text-sm">VLM (PaLM-E / ViT)</div><div className="text-xs text-slate-400 mt-1">Shared Token Head</div></div></div><div className="flex flex-col items-center gap-2"><Icons.ArrowRight className="rotate-90 text-slate-300" /><div className="bg-white border-2 border-slate-300 p-3 rounded font-mono text-sm text-center w-full"><span className="text-slate-400">Output:</span> <br/><span className="text-red-500 font-bold">Discrete Tokens</span><div className="text-xs mt-1 text-slate-500 bg-slate-50 p-1 rounded">"&lt;105&gt; &lt;204&gt; &lt;11&gt;"</div></div></div><div className="space-y-2"><div className="text-xs font-bold text-red-500 uppercase">Limitations</div><ul className="text-sm text-slate-600 list-disc list-inside"><li>像下棋一样，把空间切分成格子</li><li>动作僵硬、有抖动 (Jittering)</li><li>推理速度慢 (受限于 LLM 生成)</li></ul></div></div></Card><Card className="border-blue-200 ring-2 ring-blue-100 shadow-xl"><div className="bg-blue-50 p-4 border-b border-blue-100"><h3 className="font-bold text-blue-800 flex items-center gap-2"><span className="bg-blue-600 text-white text-xs px-2 py-1 rounded">New</span>π<sub>0.5</sub> (Hierarchical)</h3></div><div className="p-6 space-y-6"><div className="relative"><div className="bg-blue-600 rounded-lg p-4 text-center text-white mb-4"><Icons.Brain className="mx-auto mb-1" /><div className="font-mono text-xs">VLM (The Brain)</div></div><div className="absolute left-1/2 -translate-x-1/2 top-[70px] z-10"><Icons.ArrowRight className="rotate-90 text-blue-300" /></div><div className="bg-amber-500 rounded-lg p-4 text-center text-white mt-8"><div className="flex justify-center gap-2 mb-1"><Icons.Cpu /><Icons.Zap className="animate-pulse" /></div><div className="font-mono text-xs">Action Expert (Diffusion)</div></div></div><div className="flex flex-col items-center gap-2"><Icons.ArrowRight className="rotate-90 text-slate-300" /><div className="bg-white border-2 border-green-400 p-3 rounded font-mono text-sm text-center w-full shadow-sm"><span className="text-slate-400">Output:</span> <br/><span className="text-green-600 font-bold">Continuous Signal</span><div className="text-xs mt-1 text-slate-500 bg-slate-50 p-1 rounded">[0.5432, 1.2291, ...]</div></div></div><div className="space-y-2"><div className="text-xs font-bold text-green-600 uppercase">Advantages</div><ul className="text-sm text-slate-600 list-disc list-inside"><li>像画画一样，输出平滑轨迹</li><li>利用 Flow/Diffusion 生成高精度控制</li><li>动静分离，便于适配不同硬件</li></ul></div></div></Card></div></div>);
+
+        // Render
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
