@@ -168,6 +168,6 @@ cython_debug/
 #.idea/
 
 
-docs/
+# docs/
 
-src/openpi/excavator
+# src/openpi/excavator
